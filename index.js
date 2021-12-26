@@ -50,8 +50,8 @@ async function constructDb() {
     db = new Database('nginx.sqlite3'); // , { verbose: console.log }
 
     // Drop previous `visits` table
+    let stmt = db.prepare(`DROP TABLE IF EXISTS visits`);
     if (drop) {
-        let stmt = db.prepare(`DROP TABLE IF EXISTS visits`);
         console.log('Dropping previous visits table');
         await stmt.run();
     }
@@ -89,11 +89,32 @@ async function constructDb() {
         country_code TEXT,
         referer_host TEXT
     )`);
-
     await stmt.run();
 
     // Vacuum again
     stmt = db.prepare(`vacuum;`);
+    await stmt.run();
+
+    // Create indexes
+    stmt = db.prepare(`CREATE INDEX idx_pathname ON visits (pathname);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_host ON visits (host);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_hour ON visits (hour);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_day ON visits (day);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_device_type ON visits (device_type);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_device_family ON visits (device_family);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_browser ON visits (browser);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_os ON visits (os);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_country_code ON visits (country_code);`);
+    await stmt.run();
+    stmt = db.prepare(`CREATE INDEX idx_referer_host ON visits (referer_host);`);
     await stmt.run();
 }
 
@@ -169,6 +190,14 @@ function b64(s) {
     // return crypto.createHash('sha1').update(s).digest('base64');
 }
 
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve("");
+        }, ms);
+    });
+}
+
 let ipCountryLookup = {};
 
 function ip2country(ip) {
@@ -184,13 +213,13 @@ async function init() {
     const { insertMany } = createPreparedStatements();
     const liner = new lineByLine('./app-access.log');
 
-    let line, max_iterations = 139044, rows = [], max_rows_per_batch = 50000;
+    let line, max_iterations = -1, rows = [], max_rows_per_batch = 50000;
     let high_water_mark = 0, new_high_water_mark = 0;
     let startTime = + new Date(), linesProcessed = 0;
     if (high_water_mark) high_water_mark--;
 
     try {
-        while ((line = liner.next())) { // max_iterations-- &&
+        while (max_iterations-- && (line = liner.next())) {
             if (line) line = line.toString('utf8');
             if (!line || typeof line !== 'string' || line.length < 9) continue;
 
@@ -243,6 +272,10 @@ async function init() {
     }
 
     insertMany(rows);
+
+    // Vacuum (again)
+    let stmt = db.prepare(`vacuum;`);
+    stmt.run();
 
     console.log('Time:', (+ new Date() - startTime) / 1000, 's');
     console.log('New high_water_mark:', new_high_water_mark);
