@@ -222,7 +222,7 @@ async function init() {
             if (result.timestamp < high_water_mark) continue;
             if (result.timestamp > new_high_water_mark) new_high_water_mark = result.timestamp;
 
-            result.hour = result.iso_date.substr(0, 14);//+'00:00.000Z';
+            result.hour = result.iso_date.substr(0, 13);//+':00:00.000Z';
             result.day = result.iso_date.substr(0, 10);
 
             result.parsed_http_referer = new Url(result.http_referer, true);
