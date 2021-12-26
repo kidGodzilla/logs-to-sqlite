@@ -69,13 +69,10 @@ async function constructDb() {
     // Create `visits` Table // id TEXT PRIMARY KEY
     stmt = db.prepare(`CREATE TABLE IF NOT EXISTS visits (
         id INTEGER PRIMARY KEY,
-        date TEXT,
         ts INTEGER,
         day TEXT,
         hour TEXT,
         ip TEXT,
-        url TEXT,
-        protocol TEXT,
         pathname TEXT,
         host TEXT,
         device_type TEXT,
@@ -121,13 +118,10 @@ async function constructDb() {
 function createPreparedStatements() {
     // Insert via prepared statement // INSERT OR IGNORE
     const insert = db.prepare(`INSERT INTO visits (
-        date, 
         ts, 
         day, 
         hour,
         ip, 
-        url,
-        protocol, 
         pathname, 
         host, 
         device_type, 
@@ -141,13 +135,10 @@ function createPreparedStatements() {
         country_code,
         referer_host
     ) VALUES (
-        @iso_date,
         @timestamp,
         @day, 
         @hour,
         @remote_addr,
-        @url,
-        @protocol, 
         @pathname, 
         @host, 
         @device_type, 
@@ -231,7 +222,7 @@ async function init() {
             if (result.timestamp < high_water_mark) continue;
             if (result.timestamp > new_high_water_mark) new_high_water_mark = result.timestamp;
 
-            result.hour = result.iso_date.substr(0, 14)+'00:00.000Z';
+            result.hour = result.iso_date.substr(0, 14);//+'00:00.000Z';
             result.day = result.iso_date.substr(0, 10);
 
             result.parsed_http_referer = new Url(result.http_referer, true);
