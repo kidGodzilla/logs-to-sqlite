@@ -71,6 +71,8 @@ async function constructDb() {
         id INTEGER PRIMARY KEY,
         date TEXT,
         ts INTEGER,
+        day TEXT,
+        hour TEXT,
         ip TEXT,
         url TEXT,
         protocol TEXT,
@@ -100,6 +102,8 @@ function createPreparedStatements() {
     const insert = db.prepare(`INSERT INTO visits (
         date, 
         ts, 
+        day, 
+        hour,
         ip, 
         url,
         protocol, 
@@ -118,6 +122,8 @@ function createPreparedStatements() {
     ) VALUES (
         @iso_date,
         @timestamp,
+        @day, 
+        @hour,
         @remote_addr,
         @url,
         @protocol, 
@@ -196,6 +202,9 @@ async function init() {
             if (result.timestamp < high_water_mark) continue;
             if (result.timestamp > new_high_water_mark) new_high_water_mark = result.timestamp;
 
+            result.hour = result.iso_date.substr(0, 14)+'00:00.000Z';
+            result.day = result.iso_date.substr(0, 10);
+
             result.parsed_http_referer = new Url(result.http_referer, true);
             result = Object.assign(result, parseRequest(result.request));
             result.parsed_ua = uaparser.parse(result.http_user_agent);
@@ -205,7 +214,7 @@ async function init() {
 
             result.protocol = result.parsed_url.protocol;
             result.pathname = result.parsed_url.pathname;
-            // @host,
+            result.host = result.parsed_url.host;
             result.device_type = determineDeviceType(result.http_user_agent);
             result.device_family = result.parsed_ua.device.family;
             result.browser = result.parsed_ua.family;
@@ -215,7 +224,7 @@ async function init() {
             result.os_major_version = result.parsed_ua.os.major;
             result.os_minor_version = result.parsed_ua.os.minor;
             result.referer_host = result.parsed_http_referer.hostname;
-            result.host = result.parsed_url.host;
+
             delete result.bytes_sent;
 
             // console.log(result);
